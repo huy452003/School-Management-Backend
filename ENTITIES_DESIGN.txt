@@ -1,0 +1,448 @@
+================================================================================
+THIẾT KẾ DATABASE - HỆ THỐNG QUẢN LÝ NHÀ HÀNG
+================================================================================
+
+CÁC ENUMS CẦN TẠO:
+================================================================================
+
+1. UserRole
+   - ADMIN (Quản trị viên)
+   - MANAGER (Quản lý)
+   - WAITER (Nhân viên phục vụ)
+   - CHEF (Đầu bếp)
+   - CASHIER (Thu ngân)
+
+2. UserStatus
+   - ACTIVE (Đang hoạt động)
+   - INACTIVE (Không hoạt động)
+
+3. OrderStatus
+   - PENDING (Chờ xử lý)
+   - CONFIRMED (Đã xác nhận)
+   - PREPARING (Đang chuẩn bị)
+   - READY (Sẵn sàng phục vụ)
+   - SERVED (Đã phục vụ)
+   - COMPLETED (Hoàn thành)
+   - CANCELLED (Đã hủy)
+
+4. OrderType
+   - DINE_IN (Ăn tại chỗ)
+   - TAKEAWAY (Mang đi)
+   - DELIVERY (Giao hàng)
+
+5. OrderItemStatus
+   - PENDING (Chờ xử lý)
+   - PREPARING (Đang chuẩn bị)
+   - READY (Sẵn sàng)
+   - SERVED (Đã phục vụ)
+
+6. TableStatus
+   - AVAILABLE (Có sẵn)
+   - OCCUPIED (Đang sử dụng)
+   - RESERVED (Đã đặt trước)
+   - CLEANING (Đang dọn dẹp)
+
+7. MenuItemStatus
+   - AVAILABLE (Có sẵn)
+   - OUT_OF_STOCK (Hết hàng)
+   - DISCONTINUED (Ngừng phục vụ)
+
+8. PaymentMethod
+   - CASH (Tiền mặt)
+   - CARD (Thẻ)
+   - BANK_TRANSFER (Chuyển khoản)
+   - E_WALLET (Ví điện tử)
+
+9. PaymentStatus
+   - PENDING (Chờ thanh toán)
+   - COMPLETED (Đã thanh toán)
+   - REFUNDED (Đã hoàn tiền)
+
+10. ShiftStatus
+    - SCHEDULED (Đã lên lịch)
+    - IN_PROGRESS (Đang làm việc)
+    - COMPLETED (Đã hoàn thành)
+    - CANCELLED (Đã hủy)
+
+11. ReservationStatus
+    - PENDING (Chờ xác nhận)
+    - CONFIRMED (Đã xác nhận)
+    - SEATED (Đã ngồi)
+    - CANCELLED (Đã hủy)
+    - NO_SHOW (Không đến)
+
+12. DiscountType
+    - PERCENTAGE (Giảm theo phần trăm)
+    - FIXED_AMOUNT (Giảm số tiền cố định)
+
+13. PromotionStatus
+    - ACTIVE (Đang hoạt động)
+    - INACTIVE (Không hoạt động)
+    - EXPIRED (Đã hết hạn)
+
+14. InventoryStatus
+    - IN_STOCK (Còn hàng)
+    - LOW_STOCK (Sắp hết hàng)
+    - OUT_OF_STOCK (Hết hàng)
+
+
+================================================================================
+CÁC ENTITIES CHÍNH
+================================================================================
+
+1. USER (Người dùng)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- username: String (Unique, Not Null)
+- email: String (Unique, Not Null)
+- password: String (Not Null, Encrypted)
+- fullName: String (Not Null)
+- phone: String
+- address: String
+- role: UserRole (Not Null, Enum)
+- status: UserStatus (Not Null, Enum, Default: ACTIVE)
+- createdAt: LocalDateTime (Not Null)
+- updatedAt: LocalDateTime
+
+Relationships:
+- OneToMany → Order (waiter)
+- OneToMany → Payment (cashier)
+- OneToMany → Shift (employee)
+
+Indexes:
+- username (Unique)
+- email (Unique)
+
+
+2. CATEGORY (Danh mục món ăn)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- name: String (Unique, Not Null)
+- description: String
+- imageUrl: String
+- status: MenuItemStatus (Not Null, Enum, Default: ACTIVE)
+- createdAt: LocalDateTime (Not Null)
+- updatedAt: LocalDateTime
+
+Relationships:
+- OneToMany → MenuItem
+
+Indexes:
+- name (Unique)
+
+
+3. MENU_ITEM (Món ăn)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- name: String (Not Null)
+- description: String
+- price: BigDecimal (Not Null, Min: 0)
+- imageUrl: String
+- category: Category (ManyToOne, Not Null)
+- status: MenuItemStatus (Not Null, Enum, Default: AVAILABLE)
+- preparationTime: Integer (phút, Min: 0)
+- createdAt: LocalDateTime (Not Null)
+- updatedAt: LocalDateTime
+
+Relationships:
+- ManyToOne → Category
+- OneToMany → OrderItem
+- ManyToMany → Promotion (applicableItems)
+
+Indexes:
+- category_id (Foreign Key)
+
+
+4. TABLE (Bàn ăn)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- tableNumber: String (Unique, Not Null, ví dụ: "T01", "T02")
+- capacity: Integer (Not Null, Min: 1)
+- status: TableStatus (Not Null, Enum, Default: AVAILABLE)
+- location: String (ví dụ: "Tầng 1", "Khu vực A")
+- createdAt: LocalDateTime (Not Null)
+- updatedAt: LocalDateTime
+
+Relationships:
+- OneToMany → Order
+- OneToMany → Reservation
+
+Indexes:
+- tableNumber (Unique)
+
+
+5. ORDER (Đơn hàng)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- orderNumber: String (Unique, Not Null, Auto-generated)
+- table: Table (ManyToOne, nullable cho TAKEAWAY/DELIVERY)
+- waiter: User (ManyToOne, Not Null)
+- status: OrderStatus (Not Null, Enum, Default: PENDING)
+- orderType: OrderType (Not Null, Enum)
+- subTotal: BigDecimal (Not Null, Min: 0)
+- tax: BigDecimal (Not Null, Min: 0, Default: 0)
+- discount: BigDecimal (Not Null, Min: 0, Default: 0)
+- totalAmount: BigDecimal (Not Null, Min: 0)
+- notes: String
+- createdAt: LocalDateTime (Not Null)
+- updatedAt: LocalDateTime
+- completedAt: LocalDateTime
+
+Relationships:
+- ManyToOne → Table
+- ManyToOne → User (waiter)
+- OneToMany → OrderItem
+- OneToMany → Payment
+
+Indexes:
+- orderNumber (Unique)
+- table_id (Foreign Key)
+- waiter_id (Foreign Key)
+- createdAt (Index cho tìm kiếm theo ngày)
+
+
+6. ORDER_ITEM (Chi tiết món trong đơn)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- order: Order (ManyToOne, Not Null)
+- menuItem: MenuItem (ManyToOne, Not Null)
+- quantity: Integer (Not Null, Min: 1)
+- unitPrice: BigDecimal (Not Null, Min: 0) - Lưu giá tại thời điểm đặt
+- subTotal: BigDecimal (Not Null, Min: 0) - quantity * unitPrice
+- specialInstructions: String
+- status: OrderItemStatus (Not Null, Enum, Default: PENDING)
+
+Relationships:
+- ManyToOne → Order
+- ManyToOne → MenuItem
+
+Indexes:
+- order_id (Foreign Key)
+- menu_item_id (Foreign Key)
+
+
+7. PAYMENT (Thanh toán)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- order: Order (ManyToOne, Not Null)
+- cashier: User (ManyToOne, Not Null)
+- paymentMethod: PaymentMethod (Not Null, Enum)
+- amount: BigDecimal (Not Null, Min: 0)
+- status: PaymentStatus (Not Null, Enum, Default: PENDING)
+- transactionId: String (Unique, optional - cho thanh toán online)
+- paidAt: LocalDateTime
+- createdAt: LocalDateTime (Not Null)
+
+Relationships:
+- ManyToOne → Order
+- ManyToOne → User (cashier)
+
+Indexes:
+- order_id (Foreign Key)
+- cashier_id (Foreign Key)
+- transactionId (Unique, nullable)
+
+
+8. SHIFT (Ca làm việc)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- employee: User (ManyToOne, Not Null)
+- shiftDate: LocalDate (Not Null)
+- startTime: LocalTime (Not Null)
+- endTime: LocalTime (Not Null)
+- status: ShiftStatus (Not Null, Enum, Default: SCHEDULED)
+- notes: String
+- createdAt: LocalDateTime (Not Null)
+- updatedAt: LocalDateTime
+
+Relationships:
+- ManyToOne → User (employee)
+
+Indexes:
+- employee_id (Foreign Key)
+- shiftDate (Index cho tìm kiếm theo ngày)
+
+
+9. RESERVATION (Đặt bàn)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- customerName: String (Not Null)
+- customerPhone: String (Not Null)
+- customerEmail: String
+- table: Table (ManyToOne, Not Null)
+- reservationDate: LocalDate (Not Null)
+- reservationTime: LocalTime (Not Null)
+- numberOfGuests: Integer (Not Null, Min: 1)
+- status: ReservationStatus (Not Null, Enum, Default: PENDING)
+- specialRequests: String
+- createdAt: LocalDateTime (Not Null)
+- updatedAt: LocalDateTime
+
+Relationships:
+- ManyToOne → Table
+
+Indexes:
+- table_id (Foreign Key)
+- reservationDate (Index cho tìm kiếm theo ngày)
+- customerPhone (Index)
+
+
+10. PROMOTION (Khuyến mãi)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- name: String (Not Null)
+- description: String
+- discountType: DiscountType (Not Null, Enum)
+- discountValue: BigDecimal (Not Null, Min: 0)
+- minOrderAmount: BigDecimal (Min: 0, optional)
+- startDate: LocalDateTime (Not Null)
+- endDate: LocalDateTime (Not Null)
+- status: PromotionStatus (Not Null, Enum, Default: ACTIVE)
+- createdAt: LocalDateTime (Not Null)
+- updatedAt: LocalDateTime
+
+Relationships:
+- ManyToMany → MenuItem (applicableItems) - Optional, nếu null thì áp dụng cho tất cả
+
+Indexes:
+- startDate, endDate (Index cho tìm kiếm theo thời gian)
+
+
+11. INVENTORY (Kho hàng - Tùy chọn nâng cao)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- ingredientName: String (Unique, Not Null)
+- quantity: Double (Not Null, Min: 0)
+- unit: String (Not Null, ví dụ: "kg", "lít", "cái")
+- minStockLevel: Double (Not Null, Min: 0)
+- status: InventoryStatus (Not Null, Enum, tính toán tự động)
+- lastUpdated: LocalDateTime (Not Null)
+
+Relationships:
+- Không có relationship với entities khác (có thể mở rộng sau)
+
+Indexes:
+- ingredientName (Unique)
+
+
+12. REVIEW (Đánh giá - Tùy chọn)
+--------------------------------------------------------------------------------
+Trường:
+- id: Long (Primary Key, Auto Increment)
+- order: Order (ManyToOne, Not Null)
+- rating: Integer (Not Null, Min: 1, Max: 5)
+- comment: String
+- customerName: String (Not Null)
+- createdAt: LocalDateTime (Not Null)
+
+Relationships:
+- ManyToOne → Order
+
+Indexes:
+- order_id (Foreign Key)
+- rating (Index cho tìm kiếm theo điểm)
+
+
+================================================================================
+SƠ ĐỒ QUAN HỆ (RELATIONSHIPS)
+================================================================================
+
+USER (1) ──→ (N) ORDER (waiter)
+USER (1) ──→ (N) PAYMENT (cashier)
+USER (1) ──→ (N) SHIFT (employee)
+
+CATEGORY (1) ──→ (N) MENU_ITEM
+
+MENU_ITEM (1) ──→ (N) ORDER_ITEM
+ORDER (1) ──→ (N) ORDER_ITEM
+ORDER (1) ──→ (N) PAYMENT
+ORDER (1) ──→ (N) REVIEW
+
+TABLE (1) ──→ (N) ORDER
+TABLE (1) ──→ (N) RESERVATION
+
+PROMOTION (N) ──→ (N) MENU_ITEM (ManyToMany - applicableItems)
+
+
+================================================================================
+GỢI Ý THIẾT KẾ
+================================================================================
+
+1. BASE ENTITY (Tùy chọn):
+   - Tạo abstract class BaseEntity với các trường: id, createdAt, updatedAt
+   - Các entity khác extends BaseEntity để tránh lặp code
+
+2. VALIDATION:
+   - Dùng @NotNull, @NotBlank, @Min, @Max, @Email, @DecimalMin cho các trường quan trọng
+   - Validate business logic trong Service layer
+
+3. CASCADE:
+   - Order → OrderItem: CascadeType.ALL (khi xóa Order thì xóa OrderItem)
+   - Order → Payment: Không cascade (Payment có thể tồn tại độc lập)
+   - Category → MenuItem: Không cascade (MenuItem không nên bị xóa khi xóa Category)
+
+4. FETCH TYPE:
+   - Tất cả @ManyToOne: FetchType.LAZY (mặc định)
+   - @OneToMany: FetchType.LAZY
+   - Chỉ dùng EAGER khi thực sự cần thiết
+
+5. INDEXES:
+   - Index cho các trường thường xuyên tìm kiếm: orderNumber, username, email, tableNumber
+   - Index cho các trường date: createdAt, reservationDate, shiftDate
+
+6. NAMING CONVENTION:
+   - Table names: snake_case (users, orders, order_items)
+   - Column names: snake_case (user_id, order_number, created_at)
+   - Entity names: PascalCase (User, Order, OrderItem)
+
+7. AUDIT FIELDS:
+   - createdAt: Tự động set khi tạo
+   - updatedAt: Tự động update khi sửa
+   - Có thể dùng @EntityListeners và @PrePersist, @PreUpdate
+
+8. SOFT DELETE (Tùy chọn):
+   - Thêm trường deleted: Boolean (Default: false)
+   - Không xóa thực sự, chỉ đánh dấu đã xóa
+
+================================================================================
+CÁC TRƯỜNG QUAN TRỌNG CẦN LƯU Ý
+================================================================================
+
+1. ORDER.orderNumber: 
+   - Format: "ORD-YYYYMMDD-XXXX" (ví dụ: ORD-20241222-0001)
+   - Tự động generate, unique
+
+2. ORDER.totalAmount:
+   - Tính toán: subTotal + tax - discount
+   - Validate: totalAmount >= 0
+
+3. ORDER_ITEM.unitPrice:
+   - Lưu giá tại thời điểm đặt hàng
+   - Không thay đổi dù MenuItem.price thay đổi sau đó
+
+4. PAYMENT.amount:
+   - Có thể thanh toán nhiều lần cho 1 Order
+   - Tổng Payment.amount có thể <= Order.totalAmount
+
+5. TABLE.status:
+   - Tự động update khi có Order mới (OCCUPIED)
+   - Tự động update khi Order hoàn thành (AVAILABLE)
+
+6. MENU_ITEM.status:
+   - OUT_OF_STOCK: Không cho phép thêm vào Order
+   - DISCONTINUED: Ẩn khỏi menu, nhưng vẫn hiển thị trong Order cũ
+
+================================================================================
+END OF FILE
+================================================================================
