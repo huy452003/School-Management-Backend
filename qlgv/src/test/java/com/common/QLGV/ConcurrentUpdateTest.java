@@ -76,7 +76,6 @@ class ConcurrentUpdateTest {
                         .userId(testUserId)
                         .firstName("Test")
                         .lastName("User")
-                        .age(30)
                         .gender(Gender.NAM)
                         .birth(LocalDate.of(1990, 1, 1))
                         .phoneNumber("0123456789")

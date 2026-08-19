@@ -19,6 +19,8 @@ public interface UserRepo extends JpaRepository<UserEntity, Integer> {
     boolean existsByUsername(String username);
     boolean existsByUsernameAndUserIdNot(String username, Integer userId);
     boolean existsByUserId(Integer userId);
+    boolean existsByPhoneNumber(String phoneNumber);
+    boolean existsByEmail(String email);
     long countByRole(Role role);
     
     // Tìm các user với status cụ thể

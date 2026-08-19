@@ -71,21 +71,19 @@ cd modules-parent
 
 #### MySQL
 
-1. Tạo 3 databases:
+1. Tạo **một** database dùng chung cho cả security, qlsv và qlgv (các bảng `users`, `user_permissions`, `Students`, `Teachers`):
 ```sql
-CREATE DATABASE security_module;
-CREATE DATABASE qlsv;
-CREATE DATABASE qlgv;
+CREATE DATABASE modules_app CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 2. Cấu hình MySQL user (hoặc dùng root):
 ```sql
-CREATE USER 'root'@'localhost' IDENTIFIED BY 'huy12345';
-GRANT ALL PRIVILEGES ON security_module.* TO 'root'@'localhost';
-GRANT ALL PRIVILEGES ON qlsv.* TO 'root'@'localhost';
-GRANT ALL PRIVILEGES ON qlgv.* TO 'root'@'localhost';
+CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED BY 'huy12345';
+GRANT ALL PRIVILEGES ON modules_app.* TO 'root'@'localhost';
 FLUSH PRIVILEGES;
 ```
+
+Schema được tạo bởi **Flyway** khi khởi động service **security** (`db/migration`). Hai service qlsv/qlgv trỏ cùng `DB_JDBC_URL` và `spring.flyway.enabled=false`, `spring.jpa.hibernate.ddl-auto=validate`. Nên chạy **security trước** (hoặc ít nhất một lần) để migration chạy xong rồi mới bật qlsv/qlgv.
 
 #### Redis
 

@@ -9,7 +9,6 @@ const Register = () => {
     password: '',
     firstName: '',
     lastName: '',
-    age: '',
     gender: 'NAM',
     birth: '',
     phoneNumber: '',
@@ -61,7 +60,6 @@ const Register = () => {
       password: formData.password,
       firstName: formData.firstName,
       lastName: formData.lastName,
-      age: parseInt(formData.age),
       gender: formData.gender,
       birth: formatBirthDate(formData.birth), // Format sang dd-MM-yyyy
       phoneNumber: formData.phoneNumber,
@@ -69,7 +67,7 @@ const Register = () => {
       type: formData.type,
       role: formData.type === 'STUDENT' ? 'STUDENT' : 'TEACHER',
       permissions: getPermissions(formData.type), // Thêm permissions
-      // Thêm profileData tùy theo loại tài khoản
+      // Thêm profileData tùy theo loại tài khoản4  
       ...(formData.type === 'STUDENT' && {
         profileData: {
           graduate: false,
@@ -96,7 +94,6 @@ const Register = () => {
         password: '',
         firstName: '',
         lastName: '',
-        age: '',
         gender: 'NAM',
         birth: '',
         phoneNumber: '',
@@ -193,21 +190,6 @@ const Register = () => {
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="age">Tuổi</label>
-              <input
-                type="number"
-                id="age"
-                name="age"
-                value={formData.age}
-                onChange={handleChange}
-                required
-                min="1"
-                max="99"
-                placeholder="Tuổi"
-              />
-            </div>
-
-            <div className="form-group">
               <label htmlFor="gender">Giới tính</label>
               <select
                 id="gender"
@@ -220,18 +202,18 @@ const Register = () => {
                 <option value="NU">Nữ</option>
               </select>
             </div>
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="birth">Ngày sinh</label>
-            <input
-              type="date"
-              id="birth"
-              name="birth"
-              value={formData.birth}
-              onChange={handleChange}
-              required
-            />
+            <div className="form-group">
+              <label htmlFor="birth">Ngày sinh</label>
+              <input
+                type="date"
+                id="birth"
+                name="birth"
+                value={formData.birth}
+                onChange={handleChange}
+                required
+              />
+            </div>
           </div>
 
           <div className="form-row">

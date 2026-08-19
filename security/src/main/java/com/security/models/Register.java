@@ -9,8 +9,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Email;
 import java.time.LocalDate;
@@ -50,11 +48,6 @@ public class Register {
     @NotNull(message = "{validate.user.lastName.notNull}")
     @Size(max = 50, message = "{validate.user.lastName.size}")
     private String lastName;
-    
-    @NotNull(message = "{validate.user.age.notNull}")
-    @Min(value = 1, message = "{validate.user.age.min}")
-    @Max(value = 99, message = "{validate.user.age.max}")
-    private Integer age;
 
     @NotNull(message = "{validate.user.gender.notNull}")
     private Gender gender;

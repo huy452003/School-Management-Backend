@@ -8,11 +8,11 @@ import java.util.List;
 @Data
 @ToString
 public class NotFoundExceptionHandle extends RuntimeException {
-    private final List<String> listNotFounds;
+    private final List<String> notFounds;
     private final String modelName;
-    public NotFoundExceptionHandle(String message, List<String> listNotFounds, String modelName) {
+    public NotFoundExceptionHandle(String message, List<String> notFounds, String modelName) {
         super(message);
-        this.listNotFounds = listNotFounds;
+        this.notFounds = notFounds;
         this.modelName = modelName;
     }
 } 

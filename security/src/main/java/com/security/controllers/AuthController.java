@@ -2,7 +2,6 @@ package com.security.controllers;
 
 import com.model_shared.models.Response;
 import com.model_shared.models.user.UserDto;
-import com.model_shared.enums.Status;
 import com.handle_exceptions.NotFoundExceptionHandle;
 import com.logging.models.LogContext;
 import com.logging.services.LoggingService;
@@ -17,30 +16,26 @@ import com.model_shared.models.user.UpdateUserDto;
 import com.model_shared.models.user.AdminUpdateUserDto;
 import com.handle_exceptions.ValidationExceptionHandle;
 import com.security.utils.SecurityUtils;
+import com.security.utils.UserDtoMapper;
 import com.security.services.AsyncService;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.retry.annotation.Retryable;
-import org.springframework.dao.OptimisticLockingFailureException;
-
+import com.security.services.AuthInternalService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import org.modelmapper.ModelMapper;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.security.repositories.UserRepo;
 
@@ -61,10 +56,10 @@ public class AuthController {
     private ReloadableResourceBundleMessageSource messageSource;
     
     @Autowired
-    private ModelMapper modelMapper;
-    
+    private UserDtoMapper userDtoMapper;
+
     @Autowired
-    private IpBlockingService ipBlockingService;
+    private AuthInternalService authInternalService;
     
     @Autowired
     private AsyncService asyncService;
@@ -195,7 +190,7 @@ public class AuthController {
             );
 
             // Convert using ModelMapper
-            UserDto userDto = modelMapper.map(user, UserDto.class);
+            UserDto userDto = userDtoMapper.fromEntity(user);
 
             Response<UserDto> response = new Response<>(
                     200,
@@ -234,147 +229,41 @@ public class AuthController {
     }
 
     // Internal API
-    
+
     @PostMapping("/internal/users/batch")
-    @Transactional
     public ResponseEntity<List<UserDto>> getUsersByIds(
             @RequestBody Map<String, List<Integer>> request
     ) {
         LogContext logContext = getLogContext("getUsersByIds");
-        
-        List<Integer> userIds = request.get("ids");
-        
-        if (userIds == null || userIds.isEmpty()) {
-            loggingService.logWarn("Empty userIds list in batch request", logContext);
-            return ResponseEntity.ok(List.of());
-        }
-        
-        loggingService.logInfo("Batch getting users, count: " + userIds.size(), logContext);
-        
-        // Lấy tất cả users theo IDs
-        List<UserEntity> entities = userRepo.findAllById(userIds);
-        
-        // Convert sang UserDto using ModelMapper
-        List<UserDto> userDtos = entities.stream()
-                .map(entity -> modelMapper.map(entity, UserDto.class))
-                .collect(Collectors.toList());
-        
-        loggingService.logInfo("Successfully retrieved " + userDtos.size() + " users", logContext);
-        
-        // Internal API: Trả về data trực tiếp, không cần Response wrapper
-        return ResponseEntity.ok(userDtos);
+        loggingService.logInfo("getUsersByIds API Calling...", logContext);
+        return ResponseEntity.ok(authInternalService.batchGetUsersByIds(request.get("ids")));
     }
 
     @PostMapping("/internal/users/update")
-    @Retryable(retryFor = {OptimisticLockingFailureException.class}, maxAttempts = 3)
-    @Transactional(rollbackFor = Exception.class)
     public ResponseEntity<UserDto> updateUser(
         @Valid @RequestBody UpdateUserDto updateUserDto
-    ){
+    ) {
         LogContext logContext = getLogContext("updateUser");
-        
         loggingService.logInfo("updateUser API Calling... for userId: " + updateUserDto.getUserId(), logContext);
-        
-        try {
-            UserEntity userEntity = userRepo.findById(updateUserDto.getUserId()).orElseThrow(
-                    () -> new NotFoundExceptionHandle("", List.of(updateUserDto.getUserId().toString()), "Security-Model")
-            );
-            
-            // Check và log warning nếu user đang DISABLED (cho phép update nhưng có warning)
-            if (userEntity.getStatus().equals(Status.DISABLED)) {
-                loggingService.logWarn("Updating user with DISABLED status for userId: " + updateUserDto.getUserId() 
-                    + ". User is disabled but update is allowed.", logContext);
-            }
-            
-            userEntity.setFirstName(updateUserDto.getFirstName());
-            userEntity.setLastName(updateUserDto.getLastName());
-            userEntity.setAge(updateUserDto.getAge());
-            userEntity.setGender(updateUserDto.getGender());
-            userEntity.setBirth(updateUserDto.getBirth());
-            userEntity.setPhoneNumber(updateUserDto.getPhoneNumber());
-            userEntity.setEmail(updateUserDto.getEmail());
-            
-            UserEntity savedEntity = userRepo.saveAndFlush(userEntity);
-            
-            loggingService.logInfo("Updated user profile for userId: " + updateUserDto.getUserId(), logContext);
-            
-            UserDto userDto = modelMapper.map(savedEntity, UserDto.class);
-            return ResponseEntity.ok(userDto);
-        } catch (Exception e) {
-            loggingService.logError("Failed to update user for userId: " + updateUserDto.getUserId() + ". Exception: " + e.getClass().getSimpleName() + " - " + e.getMessage(), e, logContext);
-            throw e; // Re-throw để @Transactional rollback
-        }
+        return ResponseEntity.ok(authInternalService.updateUser(updateUserDto));
     }
 
     @DeleteMapping("/internal/users/delete")
-    @Transactional
-    public ResponseEntity<List<Integer>> deleteUser(
-        @RequestBody List<Integer> req
-    ){
+    public ResponseEntity<List<Integer>> deleteUser(@RequestBody List<Integer> req) {
         LogContext logContext = getLogContext("deleteUser");
-
-        Set<Integer> uniqueUserIds = new LinkedHashSet<>();
-        List<Integer> duplicates = new ArrayList<>();
-        for (Integer userId : req) {
-            if (!uniqueUserIds.add(userId)) {
-                duplicates.add(userId);
-            }
-        }
-        if (!duplicates.isEmpty()) {
-            loggingService.logWarn("Duplicate userIds detected in input: " + duplicates + ". They will be processed only once.", logContext);
-        }
-
-        List<Integer> userIds = new ArrayList<>(uniqueUserIds);
-
-        for (Integer userId : userIds) {
-            UserEntity userEntity = userRepo.findById(userId).orElseThrow(
-                () -> new NotFoundExceptionHandle("", List.of(userId.toString()), "Security-Model")
-            );
-            userRepo.delete(userEntity);
-            loggingService.logInfo("Deleted user with id: " + userId, logContext);
-        }
-        
-        return ResponseEntity.ok(userIds);
+        loggingService.logInfo("deleteUser API Calling...", logContext);
+        return ResponseEntity.ok(authInternalService.deleteUsers(req));
     }
 
     @PatchMapping("/internal/users/disable")
     public ResponseEntity<Response<List<Integer>>> disableUsers(
         @RequestBody List<Integer> req,
         @RequestHeader(value = "Accept-Language", defaultValue = "en") String acceptLanguage
-    ){
-        LogContext logContext = getLogContext("disableUsers");
+    ) {
         Locale locale = Locale.forLanguageTag(acceptLanguage);
-
-        Set<Integer> uniqueUserIds = new LinkedHashSet<>();
-        List<Integer> duplicates = new ArrayList<>();
-        for (Integer userId : req) {
-            if (!uniqueUserIds.add(userId)) {
-                duplicates.add(userId);
-            }
-        }
-        
-        if (!duplicates.isEmpty()) {
-            loggingService.logWarn("Duplicate userIds detected in input: " + duplicates + ". They will be processed only once.", logContext);
-        }
-        
-        List<Integer> userIds = new ArrayList<>(uniqueUserIds);
-
-        for (Integer userId : userIds) {
-            UserEntity userEntity = userRepo.findById(userId).orElseThrow(
-                () -> new NotFoundExceptionHandle("", List.of(userId.toString()), "Security-Model")
-            );
-            
-            // Check nếu user đã DISABLED
-            if (userEntity.getStatus() == Status.DISABLED) {
-                loggingService.logWarn("User with id: " + userId + " is already DISABLED. Skipping (idempotent operation).", logContext);
-                continue;
-            }
-            
-            userEntity.setStatus(Status.DISABLED);
-            userRepo.save(userEntity);
-            loggingService.logInfo("Disabled user with id: " + userId, logContext);
-        }
-        
+        LogContext logContext = getLogContext("disableUsers");
+        loggingService.logInfo("disableUsers API Calling...", logContext);
+        authInternalService.disableUsers(req);
         Response<List<Integer>> response = new Response<>(
                 200,
                 messageSource.getMessage("response.message.disableUsersSuccess", null, locale),
@@ -389,37 +278,11 @@ public class AuthController {
     public ResponseEntity<Response<List<Integer>>> enableUsers(
         @RequestBody List<Integer> req,
         @RequestHeader(value = "Accept-Language", defaultValue = "en") String acceptLanguage
-    ){
-        LogContext logContext = getLogContext("enableUsers");
+    ) {
         Locale locale = Locale.forLanguageTag(acceptLanguage);
-
-        Set<Integer> uniqueUserIds = new LinkedHashSet<>();
-        List<Integer> duplicates = new ArrayList<>();
-        for (Integer userId : req) {
-            if (!uniqueUserIds.add(userId)) {
-                duplicates.add(userId);
-            }
-        }
-        
-        if (!duplicates.isEmpty()) {
-            loggingService.logWarn("Duplicate userIds detected in input: " + duplicates + ". They will be processed only once.", logContext);
-        }
-        
-        List<Integer> userIds = new ArrayList<>(uniqueUserIds);
-
-        for (Integer userId : userIds) {
-            UserEntity userEntity = userRepo.findById(userId).orElseThrow(
-                () -> new NotFoundExceptionHandle("", List.of(userId.toString()), "Security-Model")
-            );
-            if (userEntity.getStatus() == Status.ENABLED) {
-                loggingService.logWarn("User with id: " + userId + " is already ENABLED. Skipping (idempotent operation).", logContext);
-                continue;
-            }
-            userEntity.setStatus(Status.ENABLED);
-            userRepo.save(userEntity);
-            loggingService.logInfo("Enabled user with id: " + userId, logContext);
-        }
-
+        LogContext logContext = getLogContext("enableUsers");
+        loggingService.logInfo("enableUsers API Calling...", logContext);
+        authInternalService.enableUsers(req);
         Response<List<Integer>> response = new Response<>(
                 200,
                 messageSource.getMessage("response.message.enableUsersSuccess", null, locale),
@@ -431,27 +294,14 @@ public class AuthController {
     }
 
     @PostMapping("/internal/ip/track-violation")
-    public ResponseEntity<Map<String, String>> trackIpViolation(
-        @RequestBody Map<String, String> request
-    ) {
+    public ResponseEntity<Map<String, String>> trackIpViolation(@RequestBody Map<String, String> request) {
         LogContext logContext = getLogContext("trackIpViolation");
-        
-        String ipAddress = request.get("ipAddress");
-        if (ipAddress == null || ipAddress.isEmpty()) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "IP address is required");
-            return ResponseEntity.badRequest().body(error);
+        loggingService.logInfo("trackIpViolation API Calling...", logContext);
+        Map<String, String> result = authInternalService.trackIpViolation(request);
+        if (result.containsKey("error")) {
+            return ResponseEntity.badRequest().body(result);
         }
-        
-        // Track IP violation (tăng counter và auto-block nếu vượt threshold)
-        ipBlockingService.incrementBlockedCountAndAutoBlock(ipAddress);
-        loggingService.logInfo("Tracked IP violation for IP: " + ipAddress, logContext);
-        
-        Map<String, String> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "IP violation tracked");
-        response.put("ipAddress", ipAddress);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(result);
     }
 
     // Update role, permissions, username, password, status - chỉ cho ADMIN

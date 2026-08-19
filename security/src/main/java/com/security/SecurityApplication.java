@@ -10,7 +10,7 @@ import org.springframework.retry.annotation.EnableRetry;
 @EnableRetry
 @EnableScheduling
 @ComponentScan(basePackages =
-		{"com.security", "com.handle_exceptions", "com.logging", "com.model_shared.config, com.kafka_shared"}
+		{"com.security", "com.handle_exceptions", "com.logging", "com.model_shared.config", "com.kafka_shared"}
 )
 public class SecurityApplication {
 

@@ -31,8 +31,9 @@ public class KafkaConfig {
     
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
     private String bootstrapServers;
-    
-    @Value("${kafka.consumer.group-id:default-group}")
+
+    /** Dùng chuẩn Spring: spring.kafka.consumer.group-id (vd. security-group), không dùng kafka.consumer.group-id. */
+    @Value("${spring.kafka.consumer.group-id:${kafka.consumer.group-id:default-group}}")
     private String groupId;
     
     @Autowired

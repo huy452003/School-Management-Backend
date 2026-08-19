@@ -309,7 +309,6 @@ public class StudentServiceImp implements StudentService {
     @Transactional(rollbackFor = Exception.class, isolation = Isolation.REPEATABLE_READ)
     @CircuitBreaker(name = "qlsv-service", fallbackMethod = "createFallback")
     public void createByUserId(UserDto user) {
-        // throw new RuntimeException("FAKE ERROR FOR TESTING DLQ");
         
         LogContext logContext = getLogContext("createByUserId");
 
@@ -415,7 +414,6 @@ public class StudentServiceImp implements StudentService {
                 );
             }
         }
-        // ADMIN và TEACHER có thể update student khác, không cần check userId
 
         // Update student entity TRƯỚC (trong transaction - có thể rollback nếu có lỗi)
         if (req.getUser().getProfileData() != null && !req.getUser().getProfileData().isEmpty()) {

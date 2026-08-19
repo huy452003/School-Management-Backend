@@ -1,0 +1,84 @@
+# 3 Spring Boot: security, qlsv, qlgv — cùng một MySQL database (modules_app). MySQL/Redis/Kafka trên host hoặc container riêng.
+# Kafka: nếu log vẫn "Connection to node ... localhost:9092" sau khi rebuild image,
+# broker đang advertised localhost — container không tới được; sửa Kafka (vd. PLAINTEXT://host.docker.internal:9092).
+
+x-app-host: &app-host
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+services:
+  security:
+    <<: *app-host
+    build:
+      context: .
+      dockerfile: security/Dockerfile
+    container_name: school-security
+    environment:
+      PORT: "8083"
+      DB_JDBC_URL: jdbc:mysql://${DOCKER_DB_HOST:-host.docker.internal}:3306/modules_app
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-huy12345}
+      REDIS_HOST: ${DOCKER_REDIS_HOST:-host.docker.internal}
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+      KAFKA_BOOTSTRAP_SERVERS: ${DOCKER_KAFKA_BOOTSTRAP:-host.docker.internal:9092}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${DOCKER_KAFKA_BOOTSTRAP:-host.docker.internal:9092}
+      SECURITY_IP_WHITELIST: 127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+    ports:
+      - "8083:8083"
+    networks:
+      - school-stack
+
+  qlsv:
+    <<: *app-host
+    build:
+      context: .
+      dockerfile: qlsv/Dockerfile
+    container_name: school-qlsv
+    environment:
+      PORT: "8080"
+      DB_JDBC_URL: jdbc:mysql://${DOCKER_DB_HOST:-host.docker.internal}:3306/modules_app
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-huy12345}
+      REDIS_HOST: ${DOCKER_REDIS_HOST:-host.docker.internal}
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+      KAFKA_BOOTSTRAP_SERVERS: ${DOCKER_KAFKA_BOOTSTRAP:-host.docker.internal:9092}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${DOCKER_KAFKA_BOOTSTRAP:-host.docker.internal:9092}
+      SECURITY_BASE_URL: http://security:8083
+    ports:
+      - "8080:8080"
+    depends_on:
+      security:
+        condition: service_started
+    networks:
+      - school-stack
+
+  qlgv:
+    <<: *app-host
+    build:
+      context: .
+      dockerfile: qlgv/Dockerfile
+    container_name: school-qlgv
+    environment:
+      PORT: "8081"
+      DB_JDBC_URL: jdbc:mysql://${DOCKER_DB_HOST:-host.docker.internal}:3306/modules_app
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-huy12345}
+      REDIS_HOST: ${DOCKER_REDIS_HOST:-host.docker.internal}
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+      KAFKA_BOOTSTRAP_SERVERS: ${DOCKER_KAFKA_BOOTSTRAP:-host.docker.internal:9092}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${DOCKER_KAFKA_BOOTSTRAP:-host.docker.internal:9092}
+      SECURITY_BASE_URL: http://security:8083
+      QLSV_BASE_URL: http://qlsv:8080
+    ports:
+      - "8081:8081"
+    depends_on:
+      security:
+        condition: service_started
+      qlsv:
+        condition: service_started
+    networks:
+      - school-stack
+
+networks:
+  school-stack:
+    driver: bridge

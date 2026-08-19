@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.time.Duration;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 @Service
@@ -44,9 +46,8 @@ public class BlacklistService {
                 Duration.ofDays(7) // TTL dài hơn để đảm bảo
             );
             
-            String readableTime = java.time.LocalDateTime.now()
-            .format(java.time.format.DateTimeFormatter
-            .ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String readableTime = LocalDateTime.now()
+            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             
             loggingService.logInfo("All tokens blacklisted for user: " + username + 
                 " at: " + readableTime, getLogContext("blacklistAllUserTokens"));

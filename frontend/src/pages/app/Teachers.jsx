@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import apiService from '../../services/apiService'
+import { ageFromYyyyMmDd } from '../../utils/ageFromBirth'
 import './Teachers.css'
 
 const Teachers = () => {
@@ -197,7 +198,6 @@ const Teachers = () => {
         userId: teacher.user.userId,
         firstName: teacher.user.firstName || '',
         lastName: teacher.user.lastName || '',
-        age: teacher.user.age || '',
         gender: teacher.user.gender || 'NAM',
         birth: birthDate,
         phoneNumber: teacher.user.phoneNumber || '',
@@ -233,6 +233,10 @@ const Teachers = () => {
     try {
       // Format birth date từ yyyy-MM-dd sang dd-MM-yyyy
       const formattedData = { ...editForm }
+      if (formattedData.user) {
+        const { age: _omitAge, ...userRest } = formattedData.user
+        formattedData.user = userRest
+      }
       if (formattedData.user.birth) {
         const dateParts = formattedData.user.birth.split('-')
         if (dateParts.length === 3 && dateParts[0].length === 4) {
@@ -675,19 +679,15 @@ const Teachers = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Tuổi *</label>
+                    <label>Tuổi</label>
                     <input
-                      type="number"
-                      value={editForm.user.age}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          user: { ...editForm.user, age: parseInt(e.target.value) || '' },
-                        })
-                      }
-                      min="1"
-                      max="99"
-                      required
+                      type="text"
+                      readOnly
+                      value={(() => {
+                        const a = ageFromYyyyMmDd(editForm.user.birth)
+                        return a != null ? String(a) : '—'
+                      })()}
+                      title="Tính từ ngày sinh"
                     />
                   </div>
                   <div className="form-group">
@@ -786,7 +786,7 @@ const Teachers = () => {
               {/* Section Role, Permissions, Username, Password, Status - chỉ hiển thị cho ADMIN */}
               {user?.role === 'ADMIN' && (
                 <div className="form-section">
-                  <h3>👑 Quản Trị (Chỉ ADMIN)</h3>
+                  <h3>👑 Quản trị tài khoản</h3>
                   <div className="form-grid">
                     <div className="form-group">
                       <label>Tên đăng nhập (Username) *</label>
