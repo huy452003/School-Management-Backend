@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react'
 import apiService from '../services/apiService'
 import API_CONFIG from '../config/api'
+import { formatApiError } from '../utils/formatApiError'
 
 const AuthContext = createContext(null)
 
@@ -97,19 +98,12 @@ export const AuthProvider = ({ children }) => {
       let errorMessage = 'Đăng nhập thất bại'
       
       if (error.response) {
-        // Server trả về lỗi
-        const responseData = error.response.data
-        errorMessage = responseData?.message || 
-                      responseData?.errors?.error || 
-                      `Lỗi ${error.response.status}: ${error.response.statusText}`
+        // Server trả về lỗi (Response.errors có chi tiết từng field)
+        errorMessage = formatApiError(error, `Lỗi ${error.response.status}: ${error.response.statusText}`)
       } else if (error.request) {
         // Request được gửi nhưng không nhận được response (CORS, network error)
         const backendUrl = API_CONFIG?.SECURITY_BASE_URL || 'http://localhost:8083'
-        errorMessage = `Không thể kết nối đến server tại ${backendUrl}.\n` +
-                      'Kiểm tra lại:\n' +
-                      '1. Backend có đang chạy không?\n' +
-                      '2. CORS đã được cấu hình chưa?\n' +
-                      '3. Environment variable VITE_SECURITY_BASE_URL đã được set chưa?'
+        errorMessage = `Không thể kết nối đến server tại ${backendUrl}`
       } else {
         // Lỗi khác
         errorMessage = error.message || 'Đăng nhập thất bại'
@@ -133,7 +127,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Đăng ký thất bại',
+        error: formatApiError(error, 'Đăng ký thất bại'),
       }
     }
   }

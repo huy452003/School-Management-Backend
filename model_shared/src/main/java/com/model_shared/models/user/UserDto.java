@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import java.util.Set;
 import java.time.LocalDate;
 import com.model_shared.enums.Gender;
@@ -17,8 +16,6 @@ import com.model_shared.enums.Status;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PastOrPresent;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 
@@ -26,7 +23,6 @@ import jakarta.validation.constraints.Size;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Setter
 public class UserDto {
     @NotNull(message = "{validate.user.type.notNull}")
     private Type type;
@@ -46,9 +42,6 @@ public class UserDto {
     @NotBlank(message = "{validate.user.lastName.notBlank}")
     private String lastName;
 
-    @NotNull(message = "{validate.user.age.notNull}")
-    @Min(value = 1, message = "{validate.user.age.min}")
-    @Max(value = 99, message = "{validate.user.age.max}")
     private Integer age;
 
     @NotNull(message = "{validate.user.gender.notNull}")

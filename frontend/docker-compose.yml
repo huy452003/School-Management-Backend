@@ -1,5 +1,5 @@
-version: '3.8'
-
+# Sửa file trong src/ → phải build lại image, không chỉ restart:
+#   docker compose up -d --build
 services:
   frontend:
     build:
@@ -7,20 +7,5 @@ services:
       dockerfile: Dockerfile
     container_name: school-management-frontend
     ports:
-      - "3000:3000"
-    volumes:
-      # Mount source code để hot reload
-      - .:/app
-      # Exclude node_modules để dùng node_modules trong container
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-    networks:
-      - school-network
-    # Restart policy
+      - "3000:80"
     restart: unless-stopped
-
-networks:
-  school-network:
-    driver: bridge
-

@@ -5,10 +5,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-/**
- * Exception cho trường hợp Rate Limit bị vượt quá
- * HTTP Status: 429 Too Many Requests
- */
 @Data
 @EqualsAndHashCode(callSuper=false)
 @AllArgsConstructor

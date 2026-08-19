@@ -263,7 +263,7 @@ public class SecurityService {
             loggingService.logWarn("Invalid user data provided for update", logContext);
             throw new IllegalArgumentException("UpdateUserDto and userId must not be null");
         }
-
+        
         try {
             loggingService.logDebug("Calling security internal API to update user: " + updateUserDto.getUserId(), logContext);
 

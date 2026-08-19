@@ -26,13 +26,12 @@ import com.kafka_shared.models.UserEvent;
 import com.model_shared.models.user.UserDto;
 import com.model_shared.enums.Permission;
 import com.model_shared.enums.Role;
-import com.model_shared.enums.Type;
 import com.model_shared.enums.Status;
-import org.modelmapper.ModelMapper;
+import com.model_shared.utils.AgeUtils;
+import com.security.utils.UserDtoMapper;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.transaction.annotation.Isolation;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -61,7 +60,7 @@ public class AuthService {
     @Autowired
     KafkaProducerService kafkaProducerService;
     @Autowired
-    ModelMapper modelMapper;
+    UserDtoMapper userDtoMapper;
 
 
     private LogContext getLogContext(String methodName) {
@@ -120,6 +119,21 @@ public class AuthService {
         
         // Convert permissions: ADMIN tự động có tất cả permissions
         Set<Permission> finalPermissions = convertToPermissions(request.getPermissions(), userRole);
+
+        String normalizedPhone = request.getPhoneNumber().trim().toLowerCase();
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+
+        // Kiểm tra xem phoneNumber và email đã tồn tại chưa
+        if (userRepo.existsByPhoneNumber(normalizedPhone)) {
+            throw new ConflictExceptionHandle(
+                "Phone number already exists", List.of(normalizedPhone), "Security-Model"
+            );
+        }
+        if (userRepo.existsByEmail(normalizedEmail)) {
+            throw new ConflictExceptionHandle(
+                "Email already exists", List.of(normalizedEmail), "Security-Model"
+            );
+        }
         
         UserEntity user;
         if (existingUser != null) {
@@ -130,11 +144,10 @@ public class AuthService {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setFirstName(request.getFirstName());
             user.setLastName(request.getLastName());
-            user.setAge(request.getAge());
             user.setGender(request.getGender());
             user.setBirth(request.getBirth());
-            user.setPhoneNumber(request.getPhoneNumber());
-            user.setEmail(request.getEmail());
+            user.setPhoneNumber(normalizedPhone);
+            user.setEmail(normalizedEmail);
             user.setRole(userRole);
             user.setPermissions(finalPermissions); // Sử dụng permissions đã convert
             user.setStatus(Status.PENDING);
@@ -148,11 +161,10 @@ public class AuthService {
                     .password(passwordEncoder.encode(request.getPassword()))
                     .firstName(request.getFirstName())
                     .lastName(request.getLastName())
-                    .age(request.getAge())
                     .gender(request.getGender())
                     .birth(request.getBirth())
-                    .phoneNumber(request.getPhoneNumber())
-                    .email(request.getEmail())
+                    .phoneNumber(normalizedPhone)
+                    .email(normalizedEmail)
                     .role(userRole)
                     .permissions(finalPermissions) // Sử dụng permissions đã convert
                     .status(Status.PENDING)
@@ -172,8 +184,7 @@ public class AuthService {
                 profileData.putAll(request.getProfileData());
             }
 
-            // Convert UserEntity → UserDto using ModelMapper
-            UserDto userDto = modelMapper.map(user, UserDto.class);
+            UserDto userDto = userDtoMapper.fromEntity(user);
             
             // Set custom field (profileData - không có trong UserEntity)
             userDto.setProfileData(profileData);
@@ -197,7 +208,7 @@ public class AuthService {
                 .status(user.getStatus())
                 .userId(user.getUserId())
                 .username(user.getUsername())
-                .age(user.getAge())
+                .age(AgeUtils.calculateAge(user.getBirth()))
                 .gender(user.getGender())
                 .birth(user.getBirth())
                 .phoneNumber(user.getPhoneNumber())
@@ -259,7 +270,7 @@ public class AuthService {
                 .status(user.getStatus())
                 .userId(user.getUserId())
                 .username(user.getUsername())
-                .age(user.getAge())
+                .age(AgeUtils.calculateAge(user.getBirth()))
                 .gender(user.getGender())
                 .birth(user.getBirth())
                 .phoneNumber(user.getPhoneNumber())
@@ -329,7 +340,7 @@ public class AuthService {
                 .status(user.getStatus())
                 .userId(user.getUserId())
                 .username(user.getUsername())
-                .age(user.getAge())
+                .age(AgeUtils.calculateAge(user.getBirth()))
                 .gender(user.getGender())
                 .birth(user.getBirth())
                 .role(user.getRole())
@@ -502,7 +513,7 @@ public class AuthService {
             updateDto.getStatus() != null ? updateDto.getStatus() : "unchanged"
         ), logContext);
         
-        return modelMapper.map(savedEntity, UserDto.class);
+        return userDtoMapper.fromEntity(savedEntity);
     }
 
 }

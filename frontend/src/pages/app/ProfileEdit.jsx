@@ -3,6 +3,18 @@ import { useAuth } from '../../contexts/AuthContext'
 import apiService from '../../services/apiService'
 import './ProfileEdit.css'
 
+/** yyyy-MM-dd → tuổi (khớp logic server: theo năm sinh và đã qua sinh nhật trong năm) */
+function ageFromYyyyMmDd(yyyyMmDd) {
+  if (!yyyyMmDd || !/^\d{4}-\d{2}-\d{2}$/.test(yyyyMmDd)) return null
+  const [y, m, d] = yyyyMmDd.split('-').map(Number)
+  const birth = new Date(y, m - 1, d)
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const md = today.getMonth() - birth.getMonth()
+  if (md < 0 || (md === 0 && today.getDate() < birth.getDate())) age -= 1
+  return age
+}
+
 const ProfileEdit = () => {
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
@@ -13,7 +25,6 @@ const ProfileEdit = () => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    age: '',
     gender: 'MALE',
     birth: '',
     phoneNumber: '',
@@ -135,7 +146,6 @@ const ProfileEdit = () => {
         setFormData({
           firstName: userInfo.firstName || '',
           lastName: userInfo.lastName || '',
-          age: userInfo.age || '',
           gender: userInfo.gender || 'MALE',
           birth: birthDate,
           phoneNumber: userInfo.phoneNumber || '',
@@ -191,7 +201,6 @@ const ProfileEdit = () => {
           userId: user.userId,
           firstName: formData.firstName.trim(),
           lastName: formData.lastName.trim(),
-          age: parseInt(formData.age),
           gender: formData.gender,
           birth: formattedBirth,
           phoneNumber: formData.phoneNumber.trim(),
@@ -288,17 +297,18 @@ const ProfileEdit = () => {
 
             <div className="form-row form-row-three">
               <div className="form-group form-group-small">
-                <label htmlFor="age">Tuổi *</label>
+                <label htmlFor="age-display">Tuổi</label>
                 <input
-                  type="number"
-                  id="age"
-                  name="age"
-                  value={formData.age}
-                  onChange={handleChange}
-                  required
-                  min="1"
-                  max="99"
-                  placeholder="Nhập tuổi"
+                  type="text"
+                  id="age-display"
+                  readOnly
+                  tabIndex={-1}
+                  value={
+                    formData.birth
+                      ? String(ageFromYyyyMmDd(formData.birth) ?? '')
+                      : ''
+                  }
+                  placeholder="Chọn ngày sinh"
                 />
               </div>
               

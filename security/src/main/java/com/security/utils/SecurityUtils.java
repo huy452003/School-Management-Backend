@@ -2,7 +2,6 @@ package com.security.utils;
 
 import com.model_shared.models.user.UserDto;
 import com.security.entities.UserEntity;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,7 +15,7 @@ import org.springframework.stereotype.Component;
 public class SecurityUtils {
     
     @Autowired
-    private ModelMapper modelMapper;
+    private UserDtoMapper userDtoMapper;
     
     // Lấy UserEntity từ SecurityContextHolder
     public UserEntity getCurrentUserEntity() {
@@ -39,7 +38,7 @@ public class SecurityUtils {
         if (userEntity == null) {
             return null;
         }
-        return modelMapper.map(userEntity, UserDto.class);
+        return userDtoMapper.fromEntity(userEntity);
     }
     
     // Kiểm tra user hiện tại có role ADMIN không

@@ -50,6 +50,7 @@ dist-ssr/
 .env.development.local
 .env.test.local
 .env.production.local
+.env
 
 # Mac OS ###
 .DS_Store

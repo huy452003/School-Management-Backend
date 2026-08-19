@@ -11,8 +11,6 @@ import java.util.Map;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PastOrPresent;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 
@@ -31,11 +29,6 @@ public class UpdateUserDto {
     @NotNull(message = "{validate.user.lastName.notNull}")
     @NotBlank(message = "{validate.user.lastName.notBlank}")
     private String lastName;
-
-    @NotNull(message = "{validate.user.age.notNull}")
-    @Min(value = 1, message = "{validate.user.age.min}")
-    @Max(value = 99, message = "{validate.user.age.max}")
-    private Integer age;
 
     @NotNull(message = "{validate.user.gender.notNull}")
     private Gender gender;

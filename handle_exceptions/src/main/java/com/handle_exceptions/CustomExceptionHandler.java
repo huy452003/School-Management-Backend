@@ -27,7 +27,7 @@ public class CustomExceptionHandler {
     ResponseEntity<Response<?>> notFoundExceptionHandler(NotFoundExceptionHandle e) {
         Locale locale = LocaleContextHolder.getLocale();
         Map<String, String> error = new HashMap<>();
-        error.put("Error", "IDs:" + e.getListNotFounds().toString());
+        error.put("Error", "IDs:" + e.getNotFounds().toString());
         
         Response<?> response = new Response<>(
                 404,
@@ -44,7 +44,8 @@ public class CustomExceptionHandler {
     ResponseEntity<Response<?>> conflictExceptionHandler(ConflictExceptionHandle e) {
         Locale locale = LocaleContextHolder.getLocale();
         Map<String, String> error = new HashMap<>();
-        error.put("Error", ": " + e.getConflictList().toString());
+        String detail = buildConflictDetail(e);
+        error.put("Error", detail);
 
         Response<?> response = new Response<>(
                 409,
@@ -54,6 +55,16 @@ public class CustomExceptionHandler {
                 null
         );
         return ResponseEntity.status(409).body(response);
+    }
+
+    private static String buildConflictDetail(ConflictExceptionHandle e) {
+        String msg = e.getMessage();
+        List<String> list = e.getConflictList();
+        String values = (list == null || list.isEmpty()) ? "" : String.join(", ", list);
+        if (msg != null && !msg.isBlank()) {
+            return values.isEmpty() ? msg : msg + ": " + values;
+        }
+        return values.isEmpty() ? "Conflict" : values;
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -67,7 +78,9 @@ public class CustomExceptionHandler {
             if (key != null && key.startsWith("{") && key.endsWith("}")) {
                 key = key.substring(1, key.length() - 1);
             }
-            String msg = messageSource.getMessage(key != null ? key : fe.getField(), null, key != null ? key : fe.getField(), locale);
+            String msg = messageSource.getMessage(
+                    key != null ? key : fe.getField(), null, key != null ? key : fe.getField(), locale
+            );
             
             // Extract field name without nested object prefix (e.g., "user.firstName" -> "firstName")
             String fieldName = fe.getField();

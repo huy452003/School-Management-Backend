@@ -5,10 +5,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-/**
- * Exception cho trường hợp external service không available
- * HTTP Status: 503 Service Unavailable
- */
 @Data
 @EqualsAndHashCode(callSuper=false)
 @AllArgsConstructor

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.common</groupId>
+		<artifactId>modules-parent</artifactId>
+		<version>3.5.0</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+	<artifactId>security_shared</artifactId>
+	<packaging>jar</packaging>
+	<name>security_shared</name>
+	<description>Shared security components for authentication and authorization</description>
+
+	<properties>
+		<java.version>17</java.version>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
+	</properties>
+
+	<dependencies>
+		<!-- Spring Boot Starters -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.github.resilience4j</groupId>
+			<artifactId>resilience4j-spring-boot3</artifactId>
+		</dependency>
+
+		<!-- Internal modules -->
+		<dependency>
+			<groupId>com.common</groupId>
+			<artifactId>model_shared</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.common</groupId>
+			<artifactId>handle_exceptions</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.common</groupId>
+			<artifactId>logging</artifactId>
+		</dependency>
+	</dependencies>
+</project>

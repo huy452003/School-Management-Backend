@@ -8,36 +8,9 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
-/**
- * Circuit Breaker Configuration - FALLBACK ONLY
- * 
- * ⚠️ LƯU Ý QUAN TRỌNG:
- * - Với Resilience4j Spring Boot 3, cách tốt nhất là cấu hình trong application.properties
- * - Config này CHỈ là fallback/default values cho các module chưa có config trong properties
- * - Spring Boot ưu tiên: application.properties > Java @Bean config
- * 
- * KHUYẾN NGHỊ:
- * - Đặt config trong application.properties của từng module (qlsv, qlgv, security)
- * - Config này sẽ tự động bị override nếu có config trong properties
- * 
- * Ví dụ override trong application.properties:
- * resilience4j.circuitbreaker.instances.security-service.failureRateThreshold=50
- * resilience4j.circuitbreaker.instances.security-service.slidingWindowSize=10
- */
 @Configuration
 public class Resilience4jCircuitBreakerConfig {
 
-    /**
-     * Tạo CircuitBreakerConfig với default values cho security-service
-     * 
-     * Được sử dụng bởi SecurityService trong security_shared module
-     * khi gọi Security module API
-     * 
-     * ⚠️ FALLBACK ONLY: Config này chỉ hoạt động nếu KHÔNG có config trong application.properties
-     * Resilience4j Spring Boot 3 ưu tiên config từ properties file
-     * 
-     * Nếu module có config trong application.properties → Properties sẽ override config này
-     */
     @Bean
     @ConditionalOnMissingBean(name = "securityServiceCircuitBreakerConfig")
     public CircuitBreakerConfig securityServiceCircuitBreakerConfig() {
@@ -78,14 +51,6 @@ public class Resilience4jCircuitBreakerConfig {
                 .build();
     }
 
-    /**
-     * Register Circuit Breaker với tên "security-service"
-     * 
-     * Circuit Breaker này sẽ được sử dụng bởi @CircuitBreaker(name = "security-service")
-     * 
-     * Lưu ý: Với Resilience4j Spring Boot 3, cách tốt nhất vẫn là cấu hình trong application.properties
-     * Config này chỉ là fallback nếu không có config trong properties
-     */
     @Bean
     @ConditionalOnMissingBean
     public CircuitBreakerRegistry circuitBreakerRegistry() {
@@ -95,18 +60,4 @@ public class Resilience4jCircuitBreakerConfig {
         registry.circuitBreaker("security-service", defaultConfig);
         return registry;
     }
-
-    /**
-     * Có thể thêm các Circuit Breaker config khác cho các service khác ở đây
-     * Ví dụ: payment-service, notification-service, etc.
-     */
-    // @Bean
-    // public CircuitBreakerConfig paymentServiceCircuitBreakerConfig() {
-    //     return CircuitBreakerConfig.custom()
-    //         .slidingWindowSize(10)
-    //         .minimumNumberOfCalls(5)
-    //         .failureRateThreshold(50f)
-    //         .waitDurationInOpenState(Duration.ofSeconds(60))
-    //         .build();
-    // }
 }
